@@ -2,14 +2,14 @@
 
 #include "ll/api/mod/NativeMod.h"
 
-namespace my_mod {
+namespace HFloatingText {
 
-class MyMod {
+class Entry {
 
 public:
-    static MyMod& getInstance();
+    static Entry& getInstance();
 
-    MyMod() : mSelf(*ll::mod::NativeMod::current()) {}
+    Entry() : mSelf(*ll::mod::NativeMod::current()) {}
 
     [[nodiscard]] ll::mod::NativeMod& getSelf() const { return mSelf; }
 
@@ -22,6 +22,8 @@ public:
     /// @return True if the mod is disabled successfully.
     bool disable();
 
+    void reloadAllFloatingTexts();
+
     // TODO: Implement this method if you need to unload the mod.
     // /// @return True if the mod is unloaded successfully.
     // bool unload();
@@ -30,4 +32,4 @@ private:
     ll::mod::NativeMod& mSelf;
 };
 
-} // namespace my_mod
+} // namespace HFloatingText
