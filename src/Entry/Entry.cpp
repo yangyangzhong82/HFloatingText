@@ -1,22 +1,23 @@
 #include "Entry/Entry.h"
 #include "Entry/Register.h"
 #include "Entry/DataManager.h"
-#include "gmlib/gm/floating_text/FloatingTextManager.h"
-#include "gmlib/gm/floating_text/base/DynamicFloatingText.h"
 #include "ll/api/mod/RegisterHelper.h"
-#include "mc/legacy/ActorRuntimeID.h"
 #include <string>
 #include <unordered_map>
-
+#include <memory> 
+#include "debug_shape/DebugText.h" 
+#include "event.h" 
 namespace HFloatingText {
 
-extern std::unordered_map<std::string, ActorRuntimeID> mFloatingTexts;
 
 Entry& Entry::getInstance() {
     static Entry instance;
     return instance;
 }
 
+std::unordered_map<std::string, std::unique_ptr<debug_shape::DebugText>>& Entry::getDebugTexts() {
+    return mDebugTexts;
+}
 
 bool Entry::load() {
     getSelf().getLogger().debug("Loading...");
@@ -30,39 +31,30 @@ bool Entry::enable() {
     } else {
         getSelf().getLogger().error("Failed to load floating text data!");
     }
+    registerPlayerConnectionListener();
     registerCommands();
     return true;
 }
 
 bool Entry::disable() {
     getSelf().getLogger().debug("Disabling...");
+    // 清除所有 DebugText 对象
+    mDebugTexts.clear();
     return true;
 }
 
 void Entry::reloadAllFloatingTexts() {
-   mFloatingTexts.clear();
-   gmlib::FloatingTextManager::getInstance().removeAll();
+   mDebugTexts.clear(); // 清除所有现有的 DebugText 对象
 
    auto& data = DataManager::getInstance().getAllFloatingTexts();
    for (auto const& [name, val] : data) {
-       if (val.type == FloatingTextType::Static) {
-           auto floatingText = gmlib::FloatingTextManager::getInstance().addStatic(val.text, val.pos, val.dimid);
-           if (auto ptr = floatingText.lock()) {
-               mFloatingTexts[name] = ptr->getRuntimeID();
-           }
-       } else {
-           auto floatingText = gmlib::FloatingTextManager::getInstance().addDynamic(
-               val.text,
-               val.pos,
-               val.dimid,
-               val.interval.value_or(1000)
-           );
-           if (auto ptr = floatingText.lock()) {
-               mFloatingTexts[name] = ptr->getRuntimeID();
-               if (auto dynamicPtr = std::dynamic_pointer_cast<gmlib::DynamicFloatingText>(ptr)) {
-                   dynamicPtr->startUpdate();
-               }
-           }
+       auto debugText = std::make_unique<debug_shape::DebugText>(val.pos, val.text);
+       debugText->draw(); // 绘制 DebugText
+       mDebugTexts[name] = std::move(debugText); // 存储 DebugText 对象
+
+       if (val.type == FloatingTextType::Dynamic) {
+           getSelf().getLogger().warn("Dynamic floating text '{}' is not fully supported with DebugShape yet. Manual update logic needed.", name);
+           // TODO: 实现动态文本的更新机制
        }
    }
 }
