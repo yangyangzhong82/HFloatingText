@@ -41,8 +41,6 @@ struct DeleteCommand {
     std::string name;
 };
 
-// 移除 mFloatingTexts，直接通过 Entry::getInstance().getDebugTexts() 访问
-// std::unordered_map<std::string, ActorRuntimeID> mFloatingTexts;
 
 void editFloatingText(const CommandOrigin& origin, CommandOutput& output, const EditCommand& param) {
     logger.debug("Editing floating text: name={}, text={}", param.name, param.text);

@@ -36,4 +36,5 @@ LL_AUTO_TYPE_INSTANCE_HOOK(
         debug_shape::DebugShapeDrawer::removeShape(debugTextPtr.get(), player); // 移除旧的
         debug_shape::DebugShapeDrawer::drawShape(debugTextPtr.get(), player);   // 绘制新的
     }
+    return origin(player, std::move(changeRequest));
 }
