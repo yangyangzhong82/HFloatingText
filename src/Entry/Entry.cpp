@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <memory> 
 #include "debug_shape/DebugText.h" 
-#include "event.h" 
+#include "event.h"
 namespace HFloatingText {
 
 
@@ -31,6 +31,7 @@ bool Entry::enable() {
     } else {
         getSelf().getLogger().error("Failed to load floating text data!");
     }
+    FloatingTextManager::getInstance().startAllDynamicTextUpdates(); // 启动所有动态文本更新
     registerPlayerConnectionListener();
     registerCommands();
     return true;
@@ -38,6 +39,7 @@ bool Entry::enable() {
 
 bool Entry::disable() {
     getSelf().getLogger().debug("Disabling...");
+    FloatingTextManager::getInstance().stopAllDynamicTextUpdates(); // 停止所有动态文本更新
     // 清除所有 DebugText 对象
     mDebugTexts.clear();
     return true;
@@ -52,9 +54,9 @@ void Entry::reloadAllFloatingTexts() {
        debugText->draw(); // 绘制 DebugText
        mDebugTexts[name] = std::move(debugText); // 存储 DebugText 对象
 
+       // 动态文本的更新由 FloatingTextManager 管理
        if (val.type == FloatingTextType::Dynamic) {
-           getSelf().getLogger().warn("Dynamic floating text '{}' is not fully supported with DebugShape yet. Manual update logic needed.", name);
-           // TODO: 实现动态文本的更新机制
+           FloatingTextManager::getInstance().startDynamicTextUpdate(name, val);
        }
    }
 }

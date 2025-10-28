@@ -2,6 +2,7 @@
 
 #include "ll/api/mod/NativeMod.h"
 #include "debug_shape/DebugText.h" // 引入 DebugText 头文件
+#include "Entry/FloatingTextManager.h"
 #include <string>
 #include <unordered_map>
 #include <memory> // For std::unique_ptr

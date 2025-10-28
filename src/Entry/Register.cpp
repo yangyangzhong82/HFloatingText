@@ -53,11 +53,17 @@ void editFloatingText(const CommandOrigin& origin, CommandOutput& output, const 
 
     auto& debugText = debugTexts[param.name];
     debugText->setText(param.text);
+    debug_shape::DebugShapeDrawer::drawShape(debugText.get()); // 立即更新显示
 
     auto& data = DataManager::getInstance().getAllFloatingTexts();
     if (data.contains(param.name)) {
         data[param.name].text = param.text;
         DataManager::getInstance().save();
+
+        // 如果是动态文本，需要重新启动其更新任务以反映新文本
+        if (data[param.name].type == FloatingTextType::Dynamic) {
+            FloatingTextManager::getInstance().startDynamicTextUpdate(param.name, data[param.name]);
+        }
     }
 
     output.success("Floating text updated.");
@@ -75,6 +81,7 @@ void deleteFloatingText(const CommandOrigin& origin, CommandOutput& output, cons
 
     debugTexts.erase(param.name);
     DataManager::getInstance().removeFloatingText(param.name);
+    FloatingTextManager::getInstance().stopDynamicTextUpdate(param.name); // 停止动态文本的更新任务
     output.success("Floating text deleted.");
     logger.debug("Successfully deleted floating text with name {}.", param.name);
 }
@@ -159,6 +166,11 @@ void registerCommands() {
             debugTexts[param.name] = std::move(debugText); // 存储 DebugText 对象
 
             DataManager::getInstance().addOrUpdateFloatingText(
+                param.name,
+                {param.text, pos, (DimensionType)param.dimid, FloatingTextType::Dynamic, param.interval}
+            );
+            // 启动动态文本的更新任务
+            FloatingTextManager::getInstance().startDynamicTextUpdate(
                 param.name,
                 {param.text, pos, (DimensionType)param.dimid, FloatingTextType::Dynamic, param.interval}
             );

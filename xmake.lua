@@ -11,10 +11,12 @@ else
     add_requires("levilamina", {configs = {target_type = "client"}})
 end
 add_repositories("engsr6982-repo https://github.com/engsr6982/xmake-repo.git")
+add_repositories("yyz-repo https://github.com/yangyangzhong82/xmake-repo.git")
 
-add_requires("debug_shape")
+add_requires("debug_shape 0.3.0")
 add_requires("levibuildscript")
 add_requires("gmlib")
+add_requires("placeholder 0.4.4")
 if not has_config("vs_runtime") then
     set_runtimes("MD")
 end
@@ -30,7 +32,7 @@ target("HFloatingText") -- Change this to your mod name.
     add_rules("@levibuildscript/modpacker")
     add_cxflags( "/EHa", "/utf-8", "/W4", "/w44265", "/w44289", "/w44296", "/w45263", "/w44738", "/w45204")
     add_defines("NOMINMAX", "UNICODE")
-    add_packages("levilamina","gmlib","debug_shape")
+    add_packages("levilamina","gmlib","debug_shape","placeholder")
     set_exceptions("none") -- To avoid conflicts with /EHa.
     set_kind("shared")
     set_languages("c++20")
