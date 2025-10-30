@@ -1,22 +1,23 @@
 #include "Entry/Register.h"
+#include "Entry/DataManager.h"
+#include "Entry/Entry.h"
+#include "debug_shape/DebugText.h"
 #include "ll/api/command/CommandHandle.h"
 #include "ll/api/command/CommandRegistrar.h"
 #include "ll/api/command/Overload.h"
+#include "ll/api/io/FileUtils.h"
+#include "logger.h"
 #include "mc/deps/core/math/Vec3.h"
 #include "mc/server/commands/Command.h"
 #include "mc/server/commands/CommandOutput.h"
+#include "mc/server/commands/CommandPermissionLevel.h"
+#include "mc/server/commands/CommandPosition.h"
 #include "mc/server/commands/CommandPositionFloat.h"
 #include "mc/world/level/dimension/Dimension.h"
+#include <memory>
 #include <string>
 #include <unordered_map>
-#include <memory> 
-#include "logger.h"
-#include "ll/api/io/FileUtils.h"
-#include "mc/server/commands/CommandPosition.h" 
-#include "Entry/DataManager.h"
-#include "Entry/Entry.h"
 
-#include "debug_shape/DebugText.h"
 
 namespace HFloatingText {
 
@@ -90,7 +91,7 @@ void deleteFloatingText(const CommandOrigin& origin, CommandOutput& output, cons
 void registerCommands() {
     logger.debug("Registering HFloatingText commands...");
     auto& registrar = ll::command::CommandRegistrar::getInstance();
-    auto& command = registrar.getOrCreateCommand("hft", "HFloatingText command");
+    auto& command = registrar.getOrCreateCommand("hft", "HFloatingText command",CommandPermissionLevel::GameDirectors);
 
     command.overload<CreateCommand>()
         .text("create")
