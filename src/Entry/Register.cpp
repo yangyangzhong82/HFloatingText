@@ -1,7 +1,8 @@
 #include "Entry/Register.h"
 #include "Entry/DataManager.h"
 #include "Entry/Entry.h"
-#include "debug_shape/DebugText.h"
+#include "debug_shape/api/shape/IDebugText.h"
+#include "debug_shape/api/IDebugShapeDrawer.h"
 #include "ll/api/command/CommandHandle.h"
 #include "ll/api/command/CommandRegistrar.h"
 #include "ll/api/command/Overload.h"
@@ -45,27 +46,21 @@ struct DeleteCommand {
 
 void editFloatingText(const CommandOrigin& origin, CommandOutput& output, const EditCommand& param) {
     logger.debug("Editing floating text: name={}, text={}", param.name, param.text);
-    auto& debugTexts = Entry::getInstance().getDebugTexts();
-    if (!debugTexts.contains(param.name)) {
+    // FloatingTextManager 现在直接管理 DebugText 实例
+    // 这里只需要更新 DataManager 中的数据，FloatingTextManager 会自动处理更新
+
+    auto& data = DataManager::getInstance().getAllFloatingTexts();
+    if (!data.contains(param.name)) {
         output.error("Floating text with this name does not exist.");
         logger.debug("Floating text with name {} does not exist.", param.name);
         return;
     }
 
-    auto& debugText = debugTexts[param.name];
-    debugText->setText(param.text);
-    debug_shape::DebugShapeDrawer::drawShape(debugText.get()); // 立即更新显示
+    data[param.name].text = param.text;
+    DataManager::getInstance().save();
 
-    auto& data = DataManager::getInstance().getAllFloatingTexts();
-    if (data.contains(param.name)) {
-        data[param.name].text = param.text;
-        DataManager::getInstance().save();
-
-        // 如果是动态文本，需要重新启动其更新任务以反映新文本
-        if (data[param.name].type == FloatingTextType::Dynamic) {
-            FloatingTextManager::getInstance().startDynamicTextUpdate(param.name, data[param.name]);
-        }
-    }
+    // 重新启动动态文本的更新任务以反映新文本
+    FloatingTextManager::getInstance().startDynamicTextUpdate(param.name, data[param.name]);
 
     output.success("Floating text updated.");
     logger.debug("Successfully updated floating text with name {}.", param.name);
@@ -73,16 +68,18 @@ void editFloatingText(const CommandOrigin& origin, CommandOutput& output, const 
 
 void deleteFloatingText(const CommandOrigin& origin, CommandOutput& output, const DeleteCommand& param) {
     logger.debug("Deleting floating text: name={}", param.name);
-    auto& debugTexts = Entry::getInstance().getDebugTexts();
-    if (!debugTexts.contains(param.name)) {
+    // FloatingTextManager 现在直接管理 DebugText 实例
+    // 这里只需要从 DataManager 中删除数据，并停止 FloatingTextManager 中的更新任务
+
+    auto& data = DataManager::getInstance().getAllFloatingTexts();
+    if (!data.contains(param.name)) {
         output.error("Floating text with this name does not exist.");
         logger.debug("Floating text with name {} does not exist.", param.name);
         return;
     }
 
-    debugTexts.erase(param.name);
     DataManager::getInstance().removeFloatingText(param.name);
-    FloatingTextManager::getInstance().stopDynamicTextUpdate(param.name); // 停止动态文本的更新任务
+    FloatingTextManager::getInstance().stopDynamicTextUpdate(param.name); // 停止动态文本的更新任务并删除 DebugText 实例
     output.success("Floating text deleted.");
     logger.debug("Successfully deleted floating text with name {}.", param.name);
 }
@@ -111,8 +108,8 @@ void registerCommands() {
                 param.text,
                 param.dimid
             );
-            auto& debugTexts = Entry::getInstance().getDebugTexts();
-            if (debugTexts.contains(param.name)) {
+            auto& data = DataManager::getInstance().getAllFloatingTexts();
+            if (data.contains(param.name)) {
                 output.error("Floating text with this name already exists.");
                 logger.debug("Floating text with name {} already exists.", param.name);
                 return;
@@ -120,9 +117,10 @@ void registerCommands() {
             auto pos = param.pos.getPosition(cmd.mVersion, origin, Vec3::ZERO());
             logger.debug("Creating static floating text at position: ({}, {}, {})", pos.x, pos.y, pos.z);
             
-            auto debugText = std::make_unique<debug_shape::DebugText>(pos, param.text);
-            debugText->draw(); // 绘制 DebugText
-            debugTexts[param.name] = std::move(debugText); // 存储 DebugText 对象
+            auto debugText = debug_shape::IDebugText::create(pos, param.text);
+            if (debugText) {
+                debug_shape::IDebugShapeDrawer::getInstance().drawShape(*debugText);
+            }
 
             DataManager::getInstance().addOrUpdateFloatingText(
                 param.name,
@@ -146,14 +144,14 @@ void registerCommands() {
                      ::Command const&             cmd
                  ) {
             logger.debug(
-                "Command 'createdynamic' executed: name={}, text={}, dimid={}, interval={}",
+                "Command \'createdynamic\' executed: name={}, text={}, dimid={}, interval={}",
                 param.name,
                 param.text,
                 param.dimid,
                 param.interval
             );
-            auto& debugTexts = Entry::getInstance().getDebugTexts();
-            if (debugTexts.contains(param.name)) {
+            auto& data = DataManager::getInstance().getAllFloatingTexts();
+            if (data.contains(param.name)) {
                 output.error("Floating text with this name already exists.");
                 logger.debug("Floating text with name {} already exists.", param.name);
                 return;
@@ -161,11 +159,7 @@ void registerCommands() {
             auto pos = param.pos.getPosition(cmd.mVersion, origin, Vec3::ZERO());
             logger.debug("Creating dynamic floating text at position: ({}, {}, {})", pos.x, pos.y, pos.z);
             
-            // 对于动态文本，暂时只创建 DebugText，不处理动态更新逻辑
-            auto debugText = std::make_unique<debug_shape::DebugText>(pos, param.text);
-            debugText->draw(); // 绘制 DebugText
-            debugTexts[param.name] = std::move(debugText); // 存储 DebugText 对象
-
+            // 对于动态文本，由 FloatingTextManager 负责创建和管理 DebugText
             DataManager::getInstance().addOrUpdateFloatingText(
                 param.name,
                 {param.text, pos, (DimensionType)param.dimid, FloatingTextType::Dynamic, param.interval}

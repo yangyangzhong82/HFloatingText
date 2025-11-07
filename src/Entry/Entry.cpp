@@ -5,7 +5,8 @@
 #include <string>
 #include <unordered_map>
 #include <memory> 
-#include "debug_shape/DebugText.h" 
+#include "debug_shape/api/shape/IDebugText.h" // 引入 DebugText 头文件
+#include "debug_shape/api/IDebugShapeDrawer.h" // 引入 IDebugShapeDrawer 头文件
 #include "event.h"
 namespace HFloatingText {
 
@@ -15,9 +16,7 @@ Entry& Entry::getInstance() {
     return instance;
 }
 
-std::unordered_map<std::string, std::unique_ptr<debug_shape::DebugText>>& Entry::getDebugTexts() {
-    return mDebugTexts;
-}
+// 移除 getDebugTexts 方法，因为 FloatingTextManager 现在直接管理 DebugText 实例
 
 bool Entry::load() {
     getSelf().getLogger().debug("Loading...");
@@ -40,24 +39,24 @@ bool Entry::enable() {
 bool Entry::disable() {
     getSelf().getLogger().debug("Disabling...");
     FloatingTextManager::getInstance().stopAllDynamicTextUpdates(); // 停止所有动态文本更新
-    // 清除所有 DebugText 对象
-    mDebugTexts.clear();
     return true;
 }
 
 void Entry::reloadAllFloatingTexts() {
-   mDebugTexts.clear(); // 清除所有现有的 DebugText 对象
+   // 清除所有现有的 DebugText 对象 (由 FloatingTextManager 管理)
+   FloatingTextManager::getInstance().stopAllDynamicTextUpdates();
 
    auto& data = DataManager::getInstance().getAllFloatingTexts();
    for (auto const& [name, val] : data) {
-       auto debugText = std::make_unique<debug_shape::DebugText>(val.pos, val.text);
-       debugText->draw(); // 绘制 DebugText
-       mDebugTexts[name] = std::move(debugText); // 存储 DebugText 对象
-
-       // 动态文本的更新由 FloatingTextManager 管理
-       if (val.type == FloatingTextType::Dynamic) {
-           FloatingTextManager::getInstance().startDynamicTextUpdate(name, val);
+       // 静态文本直接绘制
+       if (val.type == FloatingTextType::Static) {
+           auto debugText = debug_shape::IDebugText::create(val.pos, val.text);
+           if (debugText) {
+               debug_shape::IDebugShapeDrawer::getInstance().drawShape(*debugText);
+           }
        }
+       // 动态文本的更新由 FloatingTextManager 管理
+       FloatingTextManager::getInstance().startDynamicTextUpdate(name, val);
    }
 }
 

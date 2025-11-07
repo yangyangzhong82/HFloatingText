@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ll/api/mod/NativeMod.h"
-#include "debug_shape/DebugText.h" // 引入 DebugText 头文件
+#include "debug_shape/api/shape/IDebugText.h" // 引入 DebugText 头文件
 #include "Entry/FloatingTextManager.h"
 #include <string>
 #include <unordered_map>
@@ -30,7 +30,7 @@ public:
     void reloadAllFloatingTexts();
 
     // 获取 DebugText 对象的管理器
-    std::unordered_map<std::string, std::unique_ptr<debug_shape::DebugText>>& getDebugTexts();
+    // 移除 getDebugTexts 方法，因为 FloatingTextManager 现在直接管理 DebugText 实例
 
     // TODO: Implement this method if you need to unload the mod.
     // /// @return True if the mod is unloaded successfully.
@@ -38,7 +38,7 @@ public:
 
 private:
     ll::mod::NativeMod& mSelf;
-    std::unordered_map<std::string, std::unique_ptr<debug_shape::DebugText>> mDebugTexts; // 管理 DebugText 对象
+    // 移除 mDebugTexts，因为 FloatingTextManager 现在直接管理 DebugText 实例
 };
 
 } // namespace HFloatingText

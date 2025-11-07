@@ -4,8 +4,8 @@
 #include "ll/api/coro/CoroTask.h"
 #include "ll/api/thread/ServerThreadExecutor.h"
 #include "mc/deps/core/math/Vec3.h"
-#include "debug_shape/DebugText.h"
-#include "debug_shape/DebugShapeDrawer.h"
+#include "debug_shape/api/shape/IDebugText.h"
+#include "debug_shape/api/IDebugShapeDrawer.h"
 
 #include <string>
 #include <unordered_map>
@@ -20,6 +20,9 @@ class FloatingTextManager {
 private:
     std::unordered_map<std::string, ll::coro::CoroTask<>> mDynamicTextTasks;
     std::atomic<bool>                                      mRunning;
+
+    // 存储 IDebugText 实例的映射
+    std::unordered_map<std::string, std::unique_ptr<debug_shape::IDebugText>> mDebugTexts;
 
     FloatingTextManager();
     ~FloatingTextManager();
