@@ -37,17 +37,26 @@ private:
 public:
     static FloatingTextManager& getInstance();
 
+    // 添加静态文本
+    void addStaticText(const std::string& name, const FloatingTextData& data);
+
+    // 移除文本（静态或动态）
+    void removeText(const std::string& name);
+
     // 启动单个动态文本的更新
     void startDynamicTextUpdate(const std::string& name, const FloatingTextData& data);
 
     // 停止单个动态文本的更新
     void stopDynamicTextUpdate(const std::string& name);
 
-    // 启动所有动态文本的更新
-    void startAllDynamicTextUpdates();
+    // 向指定玩家显示所有悬浮字
+    void showAllTextsToPlayer(Player& player);
 
-    // 停止所有动态文本的更新
-    void stopAllDynamicTextUpdates();
+    // 加载并显示所有悬浮字
+    void loadAndShowAllTexts();
+
+    // 卸载所有悬浮字
+    void unloadAllTexts();
 
     // 获取动态文本的当前内容 (示例，后续可扩展)
     std::string getDynamicTextContent(const std::string& name, const FloatingTextData& data, Player* player);

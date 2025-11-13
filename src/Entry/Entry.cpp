@@ -5,9 +5,9 @@
 #include <string>
 #include <unordered_map>
 #include <memory> 
-#include "debug_shape/api/shape/IDebugText.h" // 引入 DebugText 头文件
-#include "debug_shape/api/IDebugShapeDrawer.h" // 引入 IDebugShapeDrawer 头文件
-#include "event.h"
+#include "debug_shape/api/shape/IDebugText.h" 
+#include "debug_shape/api/IDebugShapeDrawer.h" 
+#include "../event.h"
 namespace HFloatingText {
 
 
@@ -25,12 +25,10 @@ bool Entry::load() {
 
 bool Entry::enable() {
     getSelf().getLogger().debug("Enabling...");
-    if (DataManager::getInstance().load()) {
-        reloadAllFloatingTexts();
-    } else {
+    if (!DataManager::getInstance().load()) {
         getSelf().getLogger().error("Failed to load floating text data!");
     }
-    FloatingTextManager::getInstance().startAllDynamicTextUpdates(); // 启动所有动态文本更新
+    FloatingTextManager::getInstance().loadAndShowAllTexts(); // 加载并显示所有文本
     registerPlayerConnectionListener();
     registerCommands();
     return true;
@@ -38,26 +36,19 @@ bool Entry::enable() {
 
 bool Entry::disable() {
     getSelf().getLogger().debug("Disabling...");
-    FloatingTextManager::getInstance().stopAllDynamicTextUpdates(); // 停止所有动态文本更新
+    FloatingTextManager::getInstance().unloadAllTexts(); // 卸载所有文本
     return true;
 }
 
 void Entry::reloadAllFloatingTexts() {
-   // 清除所有现有的 DebugText 对象 (由 FloatingTextManager 管理)
-   FloatingTextManager::getInstance().stopAllDynamicTextUpdates();
-
-   auto& data = DataManager::getInstance().getAllFloatingTexts();
-   for (auto const& [name, val] : data) {
-       // 静态文本直接绘制
-       if (val.type == FloatingTextType::Static) {
-           auto debugText = debug_shape::IDebugText::create(val.pos, val.text);
-           if (debugText) {
-               debug_shape::IDebugShapeDrawer::getInstance().drawShape(*debugText);
-           }
-       }
-       // 动态文本的更新由 FloatingTextManager 管理
-       FloatingTextManager::getInstance().startDynamicTextUpdate(name, val);
-   }
+    getSelf().getLogger().debug("Reloading all floating texts...");
+    FloatingTextManager::getInstance().unloadAllTexts();
+    // Re-load data from file
+    if (DataManager::getInstance().load()) {
+        FloatingTextManager::getInstance().loadAndShowAllTexts();
+    } else {
+        getSelf().getLogger().error("Failed to reload floating text data!");
+    }
 }
 
 } // namespace HFloatingText

@@ -13,22 +13,8 @@ void registerPlayerConnectionListener() {
     ll::event::EventBus::getInstance().emplaceListener<ll::event::player::PlayerJoinEvent>(
         [](ll::event::player::PlayerJoinEvent& event) {
             auto& player = event.self();
-            // 获取所有悬浮字，先移除旧的，再为加入的玩家绘制新的
-            auto& floatingTextManager = HFloatingText::FloatingTextManager::getInstance();
-            auto& allFloatingTexts    = HFloatingText::DataManager::getInstance().getAllFloatingTexts();
-
-            for (auto const& [name, data] : allFloatingTexts) {
-                if (data.type == HFloatingText::FloatingTextType::Static) {
-                    // 静态文本直接绘制
-                    auto debugText = debug_shape::IDebugText::create(data.pos, data.text);
-                    if (debugText) {
-                        debug_shape::IDebugShapeDrawer::getInstance().drawShape(*debugText, player);
-                    }
-                } else {
-                    // 动态文本由 FloatingTextManager 管理，这里只需要确保更新任务已启动
-                    floatingTextManager.startDynamicTextUpdate(name, data);
-                }
-            }
+            // When a player joins, show all existing floating texts to them.
+            HFloatingText::FloatingTextManager::getInstance().showAllTextsToPlayer(player);
         }
     );
 }
@@ -42,21 +28,7 @@ LL_AUTO_TYPE_INSTANCE_HOOK(
     Player&                  player,
     ChangeDimensionRequest&& changeRequest
 ) {
-    // 在玩家切换维度时重新绘制所有悬浮字
-    auto& floatingTextManager = HFloatingText::FloatingTextManager::getInstance();
-    auto& allFloatingTexts    = HFloatingText::DataManager::getInstance().getAllFloatingTexts();
-
-    for (auto const& [name, data] : allFloatingTexts) {
-        if (data.type == HFloatingText::FloatingTextType::Static) {
-            // 静态文本直接绘制
-            auto debugText = debug_shape::IDebugText::create(data.pos, data.text);
-            if (debugText) {
-                debug_shape::IDebugShapeDrawer::getInstance().drawShape(*debugText, player);
-            }
-        } else {
-            // 动态文本由 FloatingTextManager 管理，这里只需要确保更新任务已启动
-            floatingTextManager.startDynamicTextUpdate(name, data);
-        }
-    }
+    // When a player changes dimension, re-show all floating texts to them.
+    HFloatingText::FloatingTextManager::getInstance().showAllTextsToPlayer(player);
     return origin(player, std::move(changeRequest));
 }

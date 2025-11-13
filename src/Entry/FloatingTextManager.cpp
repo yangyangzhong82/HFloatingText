@@ -1,12 +1,12 @@
 #include "Entry/FloatingTextManager.h"
 #include "Entry/Entry.h"
-#include "PA/PlaceholderAPI.h" // 引入 PlaceholderAPI
+#include "PA/PlaceholderAPI.h" 
 #include "ll/api/coro/CoroTask.h"
 #include "ll/api/service/Bedrock.h"
 #include "ll/api/thread/ServerThreadExecutor.h"
 #include "logger.h"
 #include "mc/world/level/Level.h"
-#include "mc/world/actor/player/Player.h" // 引入 Player 头文件
+#include "mc/world/actor/player/Player.h" 
 #include "debug_shape/api/shape/IDebugText.h"
 #include "debug_shape/api/IDebugShapeDrawer.h"
 
@@ -20,7 +20,7 @@ namespace HFloatingText {
 FloatingTextManager::FloatingTextManager() : mRunning(false) {}
 
 FloatingTextManager::~FloatingTextManager() {
-    stopAllDynamicTextUpdates();
+    unloadAllTexts();
     // 清除所有 DebugText 实例
     mDebugTexts.clear();
 }
@@ -115,6 +115,40 @@ ll::coro::CoroTask<> FloatingTextManager::updateDynamicTextTask(
     co_return;
 }
 
+void FloatingTextManager::addStaticText(const std::string& name, const FloatingTextData& data) {
+    logger.debug("Adding static text: {}", name);
+    if (mDebugTexts.contains(name)) {
+        mDebugTexts.erase(name);
+    }
+
+    auto debugText = debug_shape::IDebugText::create(data.pos, data.text);
+    if (!debugText) {
+        logger.error("Failed to create IDebugText for static text {}", name);
+        return;
+    }
+
+    auto level = ll::service::getLevel();
+    if (level) {
+        level->forEachPlayer([&](Player& player) {
+            debug_shape::IDebugShapeDrawer::getInstance().drawShape(*debugText, player);
+            return true;
+        });
+    }
+
+    mDebugTexts.emplace(name, std::move(debugText));
+}
+
+void FloatingTextManager::removeText(const std::string& name) {
+    if (mDynamicTextTasks.contains(name)) {
+        stopDynamicTextUpdate(name); // This also erases from mDebugTexts
+    } else if (mDebugTexts.contains(name)) {
+        logger.debug("Removing static text: {}", name);
+        mDebugTexts.erase(name);
+    } else {
+        logger.debug("No text found to remove with name: {}", name);
+    }
+}
+
 void FloatingTextManager::startDynamicTextUpdate(const std::string& name, const FloatingTextData& data) {
     if (data.type != FloatingTextType::Dynamic) {
         logger.warn("Attempted to start dynamic update for static text: {}", name);
@@ -151,28 +185,39 @@ void FloatingTextManager::stopDynamicTextUpdate(const std::string& name) {
     }
 }
 
-void FloatingTextManager::startAllDynamicTextUpdates() {
-    if (mRunning) {
-        logger.warn("All dynamic text updates are already running.");
-        return;
-    }
-    mRunning = true;
-    logger.debug("Starting all dynamic text updates...");
-    auto& allFloatingTexts = DataManager::getInstance().getAllFloatingTexts();
-    for (auto const& [name, data] : allFloatingTexts) {
-        if (data.type == FloatingTextType::Dynamic) {
-            startDynamicTextUpdate(name, data);
+void FloatingTextManager::showAllTextsToPlayer(Player& player) {
+    logger.debug("Showing all floating texts to player: {}", player.getRealName());
+    for (auto const& [name, debugText] : mDebugTexts) {
+        if (debugText) {
+            debug_shape::IDebugShapeDrawer::getInstance().drawShape(*debugText, player);
         }
     }
 }
 
-void FloatingTextManager::stopAllDynamicTextUpdates() {
+void FloatingTextManager::loadAndShowAllTexts() {
+    if (mRunning) {
+        logger.warn("All floating texts are already loaded.");
+        return;
+    }
+    mRunning = true;
+    logger.debug("Loading and showing all floating texts...");
+    auto& allFloatingTexts = DataManager::getInstance().getAllFloatingTexts();
+    for (auto const& [name, data] : allFloatingTexts) {
+        if (data.type == FloatingTextType::Dynamic) {
+            startDynamicTextUpdate(name, data);
+        } else {
+            addStaticText(name, data);
+        }
+    }
+}
+
+void FloatingTextManager::unloadAllTexts() {
     if (!mRunning) {
-        logger.warn("All dynamic text updates are already stopped.");
+        logger.warn("All floating texts are already unloaded.");
         return;
     }
     mRunning = false; // 设置标志位，通知所有协程停止
-    logger.debug("Stopping all dynamic text updates...");
+    logger.debug("Unloading all floating texts...");
     mDynamicTextTasks.clear(); // 清除所有任务，这将导致协程句柄被销毁
     mDebugTexts.clear();       // 清除所有 DebugText 实例
 }
